@@ -1,0 +1,10 @@
+{
+  "name": "NearKart",
+  "description": "Local shopping and store discovery platform. Find trending products, top-rated nearby stores, and exclusive local offers.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
