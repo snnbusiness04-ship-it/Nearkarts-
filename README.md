@@ -12,34 +12,21 @@ View your app in AI Studio: https://ai.studio/apps/698268f4-f29a-4ccc-bab1-ade39
 
 **Prerequisites:**  Node.js
 
+// pages/api/send-otp.js
 
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
-npm install nodemailer
-EMAIL_USER=yourgmail@gmail.com
-EMAIL_PASS=your_16_digit_google_app_password
-/pages/api/send-otp.js
 import nodemailer from "nodemailer";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      success: false,
-      message: "Method not allowed",
-    });
-  }
+let otpStore = {}; // temporary store
 
+export default async function handler(req, res) {
   try {
     const { email } = req.body;
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Gmail Transport
+    // save otp
+    otpStore[email] = otp;
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -48,56 +35,81 @@ export default async function handler(req, res) {
       },
     });
 
-    // Send Mail
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Your OTP Code",
-      html: `
-        <div style="font-family: Arial">
-          <h2>OTP Verification</h2>
-          <p>Your OTP is:</p>
-          <h1>${otp}</h1>
-          <p>This OTP is valid for 5 minutes.</p>
-        </div>
-      `,
+      subject: "OTP Verification",
+      html: `<h1>Your OTP is ${otp}</h1>`,
     });
 
     return res.status(200).json({
       success: true,
-      otp,
+      message: "OTP Sent",
     });
 
   } catch (error) {
-    console.log(error);
-
     return res.status(500).json({
       success: false,
-      message: error.message,
+      error: error.message,
     });
   }
 }
-const sendOtp = async () => {
-  const response = await fetch("/api/send-otp", {
+
+export { otpStore };
+
+// pages/api/verify-otp.js
+
+import { otpStore } from "./send-otp";
+
+export default async function handler(req, res) {
+  try {
+    const { email, otp } = req.body;
+
+    // verify
+    if (otpStore[email] === otp) {
+
+      // remove used otp
+      delete otpStore[email];
+
+      return res.status(200).json({
+        success: true,
+        message: "Login Successful",
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: "Invalid OTP",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+}
+const verifyOtp = async () => {
+
+  const response = await fetch("/api/verify-otp", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       email,
+      otp,
     }),
   });
 
   const data = await response.json();
 
-  console.log(data);
-
   if (data.success) {
-    alert("OTP Sent");
+    alert("Login Success");
   } else {
-    alert("OTP Failed");
+    alert("Wrong OTP");
   }
 };
-git add .
-git commit -m "fixed otp"
-git push
+if (otp.length === 6) {
+   login();
+}
