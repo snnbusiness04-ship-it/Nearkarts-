@@ -1,22 +1,6 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
-
-# Run and deploy your AI Studio app
-
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/698268f4-f29a-4ccc-bab1-ade39855e1f9
-
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-// pages/api/send-otp.js
+const otpStore = {};
 
 import nodemailer from "nodemailer";
-
-let otpStore = {}; // temporary store
 
 export default async function handler(req, res) {
   try {
@@ -24,8 +8,10 @@ export default async function handler(req, res) {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // save otp
-    otpStore[email] = otp;
+    otpStore[email] = {
+      otp,
+      expires: Date.now() + 5 * 60 * 1000,
+    };
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -46,7 +32,6 @@ export default async function handler(req, res) {
       success: true,
       message: "OTP Sent",
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -57,18 +42,17 @@ export default async function handler(req, res) {
 
 export { otpStore };
 
-// pages/api/verify-otp.js
-
 import { otpStore } from "./send-otp";
 
 export default async function handler(req, res) {
   try {
     const { email, otp } = req.body;
 
-    // verify
-    if (otpStore[email] === otp) {
-
-      // remove used otp
+    if (
+      otpStore[email] &&
+      otpStore[email].otp === otp &&
+      otpStore[email].expires > Date.now()
+    ) {
       delete otpStore[email];
 
       return res.status(200).json({
@@ -79,9 +63,8 @@ export default async function handler(req, res) {
 
     return res.status(400).json({
       success: false,
-      message: "Invalid OTP",
+      message: "Invalid or Expired OTP",
     });
-
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -89,8 +72,8 @@ export default async function handler(req, res) {
     });
   }
 }
-const verifyOtp = async () => {
 
+const verifyOtp = async () => {
   const response = await fetch("/api/verify-otp", {
     method: "POST",
     headers: {
@@ -110,6 +93,10 @@ const verifyOtp = async () => {
     alert("Wrong OTP");
   }
 };
+
 if (otp.length === 6) {
-   login();
+  verifyOtp();
 }
+
+EMAIL_USER=yourgmail@gmail.com
+EMAIL_PASS=your_app_password
